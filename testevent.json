@@ -1,0 +1,5 @@
+
+{
+  "body": "Please suggest 3 places to visit in NYC. Please provie the final output in bullet points.",
+  "httpMethod":"POST"
+}

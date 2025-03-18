@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Timeout: 25
+
+Resources:
+ gbChatBotAPI:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: dev
+      Name: gbChatBotAPI
+      EndpointConfiguration: 
+        Type: REGIONAL
+      FailOnWarnings: true
+      Auth:
+        ApiKeyRequired: true
+        UsagePlan:
+          CreateUsagePlan: PER_API
+          UsagePlanName: !Join ["-", [!Ref "AWS::StackName", "gbChatBotAPIUsagePlan"]]
+          Quota:
+            Limit: 50
+            Period: MONTH
+          Throttle:
+            BurstLimit: 20
+            RateLimit: 5
+ gbChatBotFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: function for gbChatBot
+      FunctionName:  gbChatBot
+      Architectures:
+        - x86_64
+      CodeUri: .
+      Handler:  gbChatBot.lambda_handler
+      Runtime: python3.12
+      Timeout: 120
+      MemorySize: 128   # default 128mb, upto 10GB max
+      Environment:
+        Variables:
+          modelId: "arn:aws:bedrock:us-east-1:495374284576:imported-model/lcmtcd579jp0"
+          maxTokenCount: "500"
+          temperature: "0"
+          topP: "0.999"
+      Policies: 
+        - AWSLambdaExecute
+        - AmazonBedrockFullAccess
+      Events:
+       gbChatBotAPI:
+          Type: Api
+          Properties:
+            RestApiId: !Ref gbChatBotAPI
+            Path: /gbChatBot
+            Method: post
+Outputs:
+  gbChatBotAPI:
+    Description: "API Gateway endpoint URL for dev stage for gbChatBotAPI"
+    Value: !Sub "https://${gbChatBotAPI}.execute-api.${AWS::Region}.amazonaws.com/dev/gbChatBot"
+  gbChatBotFn:
+    Description: "gbChatBot Lambda Function ARN"
+    Value: !GetAtt gbChatBotFnRole.Arn
+  gbChatBotFnIamRole:
+    Description: "Implicit IAM Role created for gbChatBot function"
+    Value: !GetAtt gbChatBotFnRole.Arn
+    
